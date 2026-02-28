@@ -5,10 +5,10 @@ const { sendSuccess, sendPaginated } = require('../utils/apiResponse');
 const { getPagination, buildPaginationMeta } = require('../utils/pagination');
 
 const canAccess = (req, targetUserId) => {
-  const req_id = req.user._id.toString();
+  const reqId = req.user._id.toString();
   const tgt = targetUserId.toString();
   if (req.user.role === 'admin') return true;
-  if (req_id === tgt) return true;
+  if (reqId === tgt) return true;
   if (req.user.role === 'coach' && req.user.athleteIds?.map(String).includes(tgt)) return true;
   return false;
 };
@@ -39,7 +39,10 @@ const listGoals = asyncHandler(async (req, res) => {
 
 // GET /api/v1/goals/:id
 const getGoalById = asyncHandler(async (req, res) => {
-  const goal = await Goal.findById(req.params.id).populate('setBy', 'profile.firstName profile.lastName');
+  const goal = await Goal.findById(req.params.id).populate(
+    'setBy',
+    'profile.firstName profile.lastName'
+  );
   if (!goal) throw new AppError('Goal not found.', 404);
   if (!canAccess(req, goal.userId)) throw new AppError('Not authorised.', 403);
   return sendSuccess(res, { goal }, 'Goal retrieved');
@@ -74,12 +77,18 @@ const updateGoal = asyncHandler(async (req, res) => {
   if (!canAccess(req, goal.userId)) throw new AppError('Not authorised.', 403);
 
   const allowedUpdates = [
-    'title', 'description', 'metric', 'currentValue',
-    'targetDate', 'status', 'achievedAt', 'priority',
+    'title',
+    'description',
+    'metric',
+    'currentValue',
+    'targetDate',
+    'status',
+    'achievedAt',
+    'priority',
   ];
-  for (const key of allowedUpdates) {
+  allowedUpdates.forEach((key) => {
     if (req.body[key] !== undefined) goal[key] = req.body[key];
-  }
+  });
 
   // Auto-set achievedAt when marked achieved
   if (req.body.status === 'achieved' && !goal.achievedAt) {
@@ -103,4 +112,10 @@ const deleteGoal = asyncHandler(async (req, res) => {
   res.status(204).send();
 });
 
-module.exports = { listGoals, getGoalById, createGoal, updateGoal, deleteGoal };
+module.exports = {
+  listGoals,
+  getGoalById,
+  createGoal,
+  updateGoal,
+  deleteGoal,
+};

@@ -29,11 +29,14 @@ const connectDB = async (retries = MAX_RETRIES) => {
     logger.error(`MongoDB connection failed: ${error.message}`);
     if (retries > 0) {
       logger.info(`Retrying connection in ${RETRY_INTERVAL / 1000}s... (${retries} retries left)`);
-      await new Promise((res) => setTimeout(res, RETRY_INTERVAL));
+      await new Promise((res) => {
+        setTimeout(res, RETRY_INTERVAL);
+      });
       return connectDB(retries - 1);
     }
     logger.error('Max retries reached. Exiting process.');
     process.exit(1);
+    return null;
   }
 };
 

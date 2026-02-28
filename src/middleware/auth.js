@@ -10,7 +10,7 @@ const protect = asyncHandler(async (req, res, next) => {
   let token;
 
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
-    token = req.headers.authorization.split(' ')[1];
+    [, token] = req.headers.authorization.split(' ');
   }
 
   if (!token) {
@@ -46,15 +46,15 @@ const protect = asyncHandler(async (req, res, next) => {
  * Role-based access control factory.
  * Usage: authorize('admin') or authorize('admin', 'coach')
  */
-const authorize = (...roles) => {
-  return (req, res, next) => {
+const authorize =
+  (...roles) =>
+  (req, res, next) => {
     if (!roles.includes(req.user.role)) {
       return next(
         new AppError(`Role '${req.user.role}' is not authorised to perform this action.`, 403)
       );
     }
-    next();
+    return next();
   };
-};
 
 module.exports = { protect, authorize };

@@ -5,10 +5,10 @@ const { sendSuccess, sendPaginated } = require('../utils/apiResponse');
 const { getPagination, buildPaginationMeta } = require('../utils/pagination');
 
 const canAccess = (req, targetUserId) => {
-  const req_id = req.user._id.toString();
+  const reqId = req.user._id.toString();
   const tgt = targetUserId.toString();
   if (req.user.role === 'admin') return true;
-  if (req_id === tgt) return true;
+  if (reqId === tgt) return true;
   if (req.user.role === 'coach' && req.user.athleteIds?.map(String).includes(tgt)) return true;
   return false;
 };
@@ -37,7 +37,12 @@ const listProgressEntries = asyncHandler(async (req, res) => {
     ProgressEntry.countDocuments(filter),
   ]);
 
-  return sendPaginated(res, { entries }, buildPaginationMeta(total, page, limit), 'Progress entries retrieved');
+  return sendPaginated(
+    res,
+    { entries },
+    buildPaginationMeta(total, page, limit),
+    'Progress entries retrieved'
+  );
 });
 
 // GET /api/v1/progress/:id
@@ -78,9 +83,9 @@ const updateProgressEntry = asyncHandler(async (req, res) => {
   }
 
   const updates = ['bodyMetrics', 'performancePRs', 'notes', 'photos'];
-  for (const key of updates) {
+  updates.forEach((key) => {
     if (req.body[key] !== undefined) entry[key] = req.body[key];
-  }
+  });
 
   await entry.save();
   return sendSuccess(res, { entry }, 'Progress entry updated');

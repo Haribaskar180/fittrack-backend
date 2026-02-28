@@ -9,19 +9,14 @@ const COOKIE_OPTIONS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
   sameSite: 'strict',
-  maxAge: parseInt(process.env.REFRESH_TOKEN_EXPIRY_DAYS || '7') * 24 * 60 * 60 * 1000,
+  maxAge: parseInt(process.env.REFRESH_TOKEN_EXPIRY_DAYS || '7', 10) * 24 * 60 * 60 * 1000,
 };
 
-const generateAccessToken = (user) => {
-  return jwt.sign(
-    { sub: user._id, email: user.email, role: user.role },
-    process.env.JWT_SECRET,
-    {
-      expiresIn: process.env.JWT_ACCESS_TOKEN_EXPIRY || '15m',
-      issuer: process.env.JWT_ISSUER || 'fittrack-api',
-    }
-  );
-};
+const generateAccessToken = (user) =>
+  jwt.sign({ sub: user._id, email: user.email, role: user.role }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_ACCESS_TOKEN_EXPIRY || '15m',
+    issuer: process.env.JWT_ISSUER || 'fittrack-api',
+  });
 
 const generateRefreshToken = () => crypto.randomBytes(64).toString('hex');
 
@@ -113,9 +108,7 @@ const refresh = asyncHandler(async (req, res) => {
     throw new AppError('Refresh token missing.', 401);
   }
 
-  const user = await User.findOne({ refreshTokens: incomingToken }).select(
-    '+refreshTokens'
-  );
+  const user = await User.findOne({ refreshTokens: incomingToken }).select('+refreshTokens');
 
   if (!user) {
     throw new AppError('Invalid or expired refresh token.', 401);
@@ -132,7 +125,11 @@ const refresh = asyncHandler(async (req, res) => {
 
   const accessToken = generateAccessToken(user);
 
-  res.cookie(process.env.REFRESH_TOKEN_COOKIE_NAME || 'fittrack_rt', newRefreshToken, COOKIE_OPTIONS);
+  res.cookie(
+    process.env.REFRESH_TOKEN_COOKIE_NAME || 'fittrack_rt',
+    newRefreshToken,
+    COOKIE_OPTIONS
+  );
 
   return sendSuccess(res, { accessToken }, 'Token refreshed');
 });
@@ -159,8 +156,15 @@ const logoutAll = asyncHandler(async (req, res) => {
 });
 
 // GET /api/v1/auth/me
-const getMe = asyncHandler(async (req, res) => {
-  return sendSuccess(res, { user: req.user.toSafeObject() }, 'Current user retrieved');
-});
+const getMe = asyncHandler(async (req, res) =>
+  sendSuccess(res, { user: req.user.toSafeObject() }, 'Current user retrieved')
+);
 
-module.exports = { register, login, refresh, logout, logoutAll, getMe };
+module.exports = {
+  register,
+  login,
+  refresh,
+  logout,
+  logoutAll,
+  getMe,
+};

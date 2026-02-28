@@ -3,7 +3,6 @@ const NutritionLog = require('../models/NutritionLog');
 const Goal = require('../models/Goal');
 const ProgressEntry = require('../models/ProgressEntry');
 const User = require('../models/User');
-const WorkoutPlan = require('../models/WorkoutPlan');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
 const { sendSuccess } = require('../utils/apiResponse');
@@ -38,45 +37,61 @@ const buildUserDashboard = async (userId, period) => {
     Workout.find({ userId, date: { $gte: from, $lte: to }, deletedAt: null }),
     NutritionLog.find({ userId, date: { $gte: from, $lte: to } }),
     Goal.find({ userId }),
-    Workout.find({ userId, deletedAt: null }).sort({ date: -1 }).limit(5).select('title date durationMinutes'),
+    Workout.find({ userId, deletedAt: null })
+      .sort({ date: -1 })
+      .limit(5)
+      .select('title date durationMinutes'),
   ]);
 
   // Workout summary
   const totalSessions = workouts.length;
   let totalVolumeKg = 0;
   let totalDurationMin = 0;
-  for (const w of workouts) {
+  workouts.forEach((w) => {
     totalDurationMin += w.durationMinutes || 0;
-    for (const ex of w.exercises) {
-      for (const s of ex.sets) {
+    w.exercises.forEach((ex) => {
+      ex.sets.forEach((s) => {
         totalVolumeKg += (s.weightKg || 0) * (s.reps || 0);
-      }
-    }
-  }
+      });
+    });
+  });
 
   // Streak calculation (consecutive days with workouts)
-  const workoutDates = [...new Set(workouts.map((w) => w.date.toISOString().split('T')[0]))].sort().reverse();
+  const workoutDates = [...new Set(workouts.map((w) => w.date.toISOString().split('T')[0]))]
+    .sort()
+    .reverse();
   let streakDays = 0;
-  let checkDate = new Date();
-  for (const dateStr of workoutDates) {
+  const checkDate = new Date();
+  workoutDates.every((dateStr) => {
     const check = checkDate.toISOString().split('T')[0];
     if (dateStr === check) {
-      streakDays++;
+      streakDays += 1;
       checkDate.setDate(checkDate.getDate() - 1);
-    } else break;
-  }
+      return true;
+    }
+    return false;
+  });
 
   // Nutrition summary
   const loggedDays = nutritionLogs.length;
-  const avgDailyCalories = loggedDays > 0 ? nutritionLogs.reduce((s, l) => s + (l.totals?.calories || 0), 0) / loggedDays : 0;
-  const avgProteinG = loggedDays > 0 ? nutritionLogs.reduce((s, l) => s + (l.totals?.proteinG || 0), 0) / loggedDays : 0;
-  const avgCarbsG = loggedDays > 0 ? nutritionLogs.reduce((s, l) => s + (l.totals?.carbsG || 0), 0) / loggedDays : 0;
-  const avgFatG = loggedDays > 0 ? nutritionLogs.reduce((s, l) => s + (l.totals?.fatG || 0), 0) / loggedDays : 0;
+  const sumCalories = nutritionLogs.reduce((s, l) => s + (l.totals?.calories || 0), 0);
+  const sumProteinG = nutritionLogs.reduce((s, l) => s + (l.totals?.proteinG || 0), 0);
+  const sumCarbsG = nutritionLogs.reduce((s, l) => s + (l.totals?.carbsG || 0), 0);
+  const sumFatG = nutritionLogs.reduce((s, l) => s + (l.totals?.fatG || 0), 0);
+  const avgDailyCalories = loggedDays > 0 ? sumCalories / loggedDays : 0;
+  const avgProteinG = loggedDays > 0 ? sumProteinG / loggedDays : 0;
+  const avgCarbsG = loggedDays > 0 ? sumCarbsG / loggedDays : 0;
+  const avgFatG = loggedDays > 0 ? sumFatG / loggedDays : 0;
 
   // Goals summary
   const totalActive = goals.filter((g) => g.status === 'active').length;
   const totalAchieved = goals.filter((g) => g.status === 'achieved').length;
   const completionRate = goals.length > 0 ? Math.round((totalAchieved / goals.length) * 100) : 0;
+
+  // Weekly frequency divisor based on period
+  let weeklyDivisor = 1;
+  if (period === 'year') weeklyDivisor = 52;
+  else if (period === 'month') weeklyDivisor = 4;
 
   return {
     workoutsSummary: {
@@ -84,7 +99,7 @@ const buildUserDashboard = async (userId, period) => {
       totalVolumeKg: Math.round(totalVolumeKg),
       avgDurationMin: totalSessions > 0 ? Math.round(totalDurationMin / totalSessions) : 0,
       streakDays,
-      weeklyFrequency: Math.round(totalSessions / (period === 'year' ? 52 : period === 'month' ? 4 : 1)),
+      weeklyFrequency: Math.round(totalSessions / weeklyDivisor),
     },
     nutritionSummary: {
       avgDailyCalories: Math.round(avgDailyCalories),
@@ -112,7 +127,7 @@ const getAthleteDashboard = asyncHandler(async (req, res) => {
   // Authorization
   if (req.user.role !== 'admin') {
     if (req.user.role !== 'coach' || !req.user.athleteIds?.map(String).includes(athleteId)) {
-      throw new AppError('Not authorised to view this athlete\'s analytics.', 403);
+      throw new AppError("Not authorised to view this athlete's analytics.", 403);
     }
   }
 
@@ -126,7 +141,6 @@ const getAthleteDashboard = asyncHandler(async (req, res) => {
 
 // GET /api/v1/analytics/coach/overview
 const getCoachOverview = asyncHandler(async (req, res) => {
-  const coachId = req.user._id;
   const athleteIds = req.user.athleteIds || [];
 
   const { from } = getPeriodDates('week');
@@ -174,7 +188,9 @@ const getCoachOverview = asyncHandler(async (req, res) => {
         activeThisWeek,
         avgComplianceRate:
           athletes.length > 0
-            ? Math.round(athleteData.reduce((s, a) => s + a.weeklyComplianceRate, 0) / athletes.length)
+            ? Math.round(
+                athleteData.reduce((s, a) => s + a.weeklyComplianceRate, 0) / athletes.length
+              )
             : 0,
       },
     },
@@ -188,14 +204,15 @@ const getPlatformAnalytics = asyncHandler(async (req, res) => {
   const fromDate = from ? new Date(from) : new Date(new Date().setMonth(new Date().getMonth() - 1));
   const toDate = to ? new Date(to) : new Date();
 
-  const [totalUsers, athletes, coaches, newThisPeriod, totalWorkouts, totalNutritionLogs] = await Promise.all([
-    User.countDocuments({ deletedAt: null }),
-    User.countDocuments({ role: 'athlete', deletedAt: null }),
-    User.countDocuments({ role: 'coach', deletedAt: null }),
-    User.countDocuments({ createdAt: { $gte: fromDate, $lte: toDate }, deletedAt: null }),
-    Workout.countDocuments({ date: { $gte: fromDate, $lte: toDate }, deletedAt: null }),
-    NutritionLog.countDocuments({ date: { $gte: fromDate, $lte: toDate } }),
-  ]);
+  const [totalUsers, athletes, coaches, newThisPeriod, totalWorkouts, totalNutritionLogs] =
+    await Promise.all([
+      User.countDocuments({ deletedAt: null }),
+      User.countDocuments({ role: 'athlete', deletedAt: null }),
+      User.countDocuments({ role: 'coach', deletedAt: null }),
+      User.countDocuments({ createdAt: { $gte: fromDate, $lte: toDate }, deletedAt: null }),
+      Workout.countDocuments({ date: { $gte: fromDate, $lte: toDate }, deletedAt: null }),
+      NutritionLog.countDocuments({ date: { $gte: fromDate, $lte: toDate } }),
+    ]);
 
   const activeUsers = await Workout.distinct('userId', {
     date: { $gte: fromDate, $lte: toDate },
@@ -242,11 +259,11 @@ const getProgressChart = asyncHandler(async (req, res) => {
   const targetUserId = userId || req.user._id;
 
   // Auth check
-  const req_id = req.user._id.toString();
+  const reqId = req.user._id.toString();
   const tgt = targetUserId.toString();
   const isAuthorised =
     req.user.role === 'admin' ||
-    req_id === tgt ||
+    reqId === tgt ||
     (req.user.role === 'coach' && req.user.athleteIds?.map(String).includes(tgt));
 
   if (!isAuthorised) throw new AppError('Not authorised.', 403);
@@ -272,15 +289,20 @@ const getProgressChart = asyncHandler(async (req, res) => {
       .filter((e) => e.bodyMetrics?.[metric] != null)
       .map((e) => ({ date: e.date.toISOString(), value: e.bodyMetrics[metric] }));
   } else {
-    // PR metric: look inside performancePRs
-    unit = metric.includes('kg') ? 'kg' : metric.includes('reps') ? 'reps' : metric.includes('time') ? 's' : 'm';
-    for (const entry of entries) {
-      for (const pr of entry.performancePRs || []) {
+    // PR metric: determine unit
+    let prUnit = 'm';
+    if (metric.includes('kg')) prUnit = 'kg';
+    else if (metric.includes('reps')) prUnit = 'reps';
+    else if (metric.includes('time')) prUnit = 's';
+    unit = prUnit;
+
+    entries.forEach((entry) => {
+      (entry.performancePRs || []).forEach((pr) => {
         if (pr.metric === metric) {
           series.push({ date: entry.date.toISOString(), value: pr.value });
         }
-      }
-    }
+      });
+    });
   }
 
   return sendSuccess(res, { metric, unit, series }, 'Progress chart data retrieved');
