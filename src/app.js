@@ -5,6 +5,9 @@ const cors = require('cors');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
+const mongoSanitize = require('express-mongo-sanitize');
+const hpp = require('hpp');
+const xss = require('xss-clean');
 
 const errorHandler = require('./middleware/errorHandler');
 const logger = require('./utils/logger');
@@ -23,6 +26,9 @@ const analyticsRoutes = require('./routes/analyticsRoutes');
 const app = express();
 
 // ── Security headers ──────────────────────────────────────
+app.use(mongoSanitize());   // NoSQL injection prevention
+app.use(xss());             // XSS sanitization
+app.use(hpp());             // HTTP parameter pollution prevention
 app.use(
   helmet({
     contentSecurityPolicy: {
