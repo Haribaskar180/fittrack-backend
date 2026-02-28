@@ -29,12 +29,7 @@ const listUsers = asyncHandler(async (req, res) => {
     User.countDocuments(filter),
   ]);
 
-  return sendPaginated(
-    res,
-    { users },
-    buildPaginationMeta(total, page, limit),
-    'Users retrieved'
-  );
+  return sendPaginated(res, { users }, buildPaginationMeta(total, page, limit), 'Users retrieved');
 });
 
 // GET /api/v1/users/:id
@@ -71,9 +66,9 @@ const updateUser = asyncHandler(async (req, res) => {
 
   const allowedFields = ['profile'];
   const updates = {};
-  for (const field of allowedFields) {
+  allowedFields.forEach((field) => {
     if (req.body[field] !== undefined) updates[field] = req.body[field];
-  }
+  });
 
   const user = await User.findOneAndUpdate(
     { _id: targetId, deletedAt: null },
@@ -153,4 +148,11 @@ const deleteUser = asyncHandler(async (req, res) => {
   res.status(204).send();
 });
 
-module.exports = { listUsers, getUserById, updateUser, updateUserRole, assignCoach, deleteUser };
+module.exports = {
+  listUsers,
+  getUserById,
+  updateUser,
+  updateUserRole,
+  assignCoach,
+  deleteUser,
+};

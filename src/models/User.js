@@ -69,7 +69,7 @@ userSchema.pre('save', async function (next) {
   if (!this.isModified('passwordHash')) return next();
   const salt = await bcrypt.genSalt(12);
   this.passwordHash = await bcrypt.hash(this.passwordHash, salt);
-  next();
+  return next();
 });
 
 // Method: compare password

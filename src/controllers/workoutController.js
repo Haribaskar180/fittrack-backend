@@ -1,5 +1,4 @@
 const WorkoutPlan = require('../models/WorkoutPlan');
-const User = require('../models/User');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
 const { sendSuccess, sendPaginated } = require('../utils/apiResponse');
@@ -10,7 +9,7 @@ const listWorkoutPlans = asyncHandler(async (req, res) => {
   const { page, limit, skip } = getPagination(req.query);
   const { isTemplate } = req.query;
 
-  let filter = {};
+  const filter = {};
 
   if (req.user.role === 'athlete') {
     filter.assignedTo = req.user._id;
@@ -30,7 +29,12 @@ const listWorkoutPlans = asyncHandler(async (req, res) => {
     WorkoutPlan.countDocuments(filter),
   ]);
 
-  return sendPaginated(res, { plans }, buildPaginationMeta(total, page, limit), 'Workout plans retrieved');
+  return sendPaginated(
+    res,
+    { plans },
+    buildPaginationMeta(total, page, limit),
+    'Workout plans retrieved'
+  );
 });
 
 // GET /api/v1/workout-plans/:id
@@ -45,11 +49,7 @@ const getWorkoutPlanById = asyncHandler(async (req, res) => {
   const userId = req.user._id.toString();
   const isAssigned = plan.assignedTo.some((u) => u._id.toString() === userId);
 
-  if (
-    req.user.role !== 'admin' &&
-    plan.createdBy._id.toString() !== userId &&
-    !isAssigned
-  ) {
+  if (req.user.role !== 'admin' && plan.createdBy._id.toString() !== userId && !isAssigned) {
     throw new AppError('Not authorised to view this plan.', 403);
   }
 

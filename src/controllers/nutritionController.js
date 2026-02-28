@@ -5,10 +5,10 @@ const { sendSuccess, sendPaginated } = require('../utils/apiResponse');
 const { getPagination, buildPaginationMeta } = require('../utils/pagination');
 
 const canAccess = (req, targetUserId) => {
-  const req_id = req.user._id.toString();
+  const reqId = req.user._id.toString();
   const tgt = targetUserId.toString();
   if (req.user.role === 'admin') return true;
-  if (req_id === tgt) return true;
+  if (reqId === tgt) return true;
   if (req.user.role === 'coach' && req.user.athleteIds?.map(String).includes(tgt)) return true;
   return false;
 };
@@ -39,7 +39,12 @@ const listNutritionLogs = asyncHandler(async (req, res) => {
     NutritionLog.countDocuments(filter),
   ]);
 
-  return sendPaginated(res, { logs }, buildPaginationMeta(total, page, limit), 'Nutrition logs retrieved');
+  return sendPaginated(
+    res,
+    { logs },
+    buildPaginationMeta(total, page, limit),
+    'Nutrition logs retrieved'
+  );
 });
 
 // GET /api/v1/nutrition/:id
@@ -68,7 +73,13 @@ const createNutritionLog = asyncHandler(async (req, res) => {
     throw new AppError('Nutrition log for this date already exists. Use PUT to update.', 409);
   }
 
-  const log = await NutritionLog.create({ userId, date: logDate, meals: meals || [], waterMl, notes });
+  const log = await NutritionLog.create({
+    userId,
+    date: logDate,
+    meals: meals || [],
+    waterMl,
+    notes,
+  });
   return sendSuccess(res, { log }, 'Nutrition log created', 201);
 });
 

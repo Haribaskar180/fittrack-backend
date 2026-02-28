@@ -6,17 +6,11 @@ const isDevelopment = process.env.NODE_ENV !== 'production';
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: combine(
-    timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-    errors({ stack: true }),
-    json()
-  ),
+  format: combine(timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }), errors({ stack: true }), json()),
   defaultMeta: { service: 'fittrack-api' },
   transports: [
     new winston.transports.Console({
-      format: isDevelopment
-        ? combine(colorize(), simple())
-        : combine(timestamp(), json()),
+      format: isDevelopment ? combine(colorize(), simple()) : combine(timestamp(), json()),
     }),
     new winston.transports.File({
       filename: 'logs/error.log',
@@ -30,12 +24,8 @@ const logger = winston.createLogger({
       maxFiles: 5,
     }),
   ],
-  exceptionHandlers: [
-    new winston.transports.File({ filename: 'logs/exceptions.log' }),
-  ],
-  rejectionHandlers: [
-    new winston.transports.File({ filename: 'logs/rejections.log' }),
-  ],
+  exceptionHandlers: [new winston.transports.File({ filename: 'logs/exceptions.log' })],
+  rejectionHandlers: [new winston.transports.File({ filename: 'logs/rejections.log' })],
 });
 
 module.exports = logger;

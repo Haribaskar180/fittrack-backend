@@ -72,9 +72,16 @@ const nutritionLogSchema = new mongoose.Schema(
 
 // Auto-compute daily totals before save
 nutritionLogSchema.pre('save', function (next) {
-  const totals = { calories: 0, proteinG: 0, carbsG: 0, fatG: 0, fiberG: 0, waterMl: this.waterMl || 0 };
-  for (const meal of this.meals) {
-    for (const item of meal.items) {
+  const totals = {
+    calories: 0,
+    proteinG: 0,
+    carbsG: 0,
+    fatG: 0,
+    fiberG: 0,
+    waterMl: this.waterMl || 0,
+  };
+  this.meals.forEach((meal) => {
+    meal.items.forEach((item) => {
       const qty = item.quantity || 1;
       totals.calories += (item.calories || 0) * qty;
       if (item.macros) {
@@ -83,8 +90,8 @@ nutritionLogSchema.pre('save', function (next) {
         totals.fatG += (item.macros.fatG || 0) * qty;
         totals.fiberG += (item.macros.fiberG || 0) * qty;
       }
-    }
-  }
+    });
+  });
   this.totals = totals;
   next();
 });

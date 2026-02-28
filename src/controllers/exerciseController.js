@@ -63,7 +63,11 @@ const updateExercise = asyncHandler(async (req, res) => {
   // Only admin can update global exercises; coach can update their custom ones
   if (
     req.user.role !== 'admin' &&
-    !(req.user.role === 'coach' && exercise.isCustom && exercise.createdBy.toString() === req.user._id.toString())
+    !(
+      req.user.role === 'coach' &&
+      exercise.isCustom &&
+      exercise.createdBy.toString() === req.user._id.toString()
+    )
   ) {
     throw new AppError('Not authorised to update this exercise.', 403);
   }
@@ -85,4 +89,10 @@ const deleteExercise = asyncHandler(async (req, res) => {
   res.status(204).send();
 });
 
-module.exports = { listExercises, getExerciseById, createExercise, updateExercise, deleteExercise };
+module.exports = {
+  listExercises,
+  getExerciseById,
+  createExercise,
+  updateExercise,
+  deleteExercise,
+};

@@ -63,9 +63,7 @@ const workoutSchema = new mongoose.Schema(
 // Auto-compute durationMinutes
 workoutSchema.pre('save', function (next) {
   if (this.startedAt && this.completedAt) {
-    this.durationMinutes = Math.round(
-      (this.completedAt - this.startedAt) / 60000
-    );
+    this.durationMinutes = Math.round((this.completedAt - this.startedAt) / 60000);
   }
   next();
 });

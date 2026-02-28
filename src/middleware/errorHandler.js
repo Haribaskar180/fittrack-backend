@@ -1,12 +1,12 @@
 const logger = require('../utils/logger');
-const AppError = require('../utils/AppError');
 
 /**
  * Centralised error handler middleware.
  * Handles Mongoose errors, JWT errors, and custom AppErrors.
  */
+// eslint-disable-next-line no-unused-vars
 const errorHandler = (err, req, res, next) => {
-  let error = { ...err };
+  const error = { ...err };
   error.message = err.message;
   error.statusCode = err.statusCode || 500;
 
