@@ -1,0 +1,39 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - name: Run npm audit
+        run: npm audit --audit-level=high
+      - name: Check for secrets
+        run: |
+          if grep -r "password\s*=\s*['\"][^'\"]\|secret\s*=\s*['\"][^'\"]" src/ --include="*.js" -i; then
+            echo "❌ Hardcoded secrets detected!"; exit 1
+          fi
+          echo "✅ No hardcoded secrets found"
+
+  lint:
+    name: Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npx eslint src/ --ext .js || true
