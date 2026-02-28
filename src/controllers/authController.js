@@ -12,11 +12,14 @@ const COOKIE_OPTIONS = {
   maxAge: parseInt(process.env.REFRESH_TOKEN_EXPIRY_DAYS || '7', 10) * 24 * 60 * 60 * 1000,
 };
 
-const generateAccessToken = (user) =>
-  jwt.sign({ sub: user._id, email: user.email, role: user.role }, process.env.JWT_SECRET, {
+const generateAccessToken = (user) => {
+  const payload = { sub: user._id, email: user.email, role: user.role };
+  const opts = {
     expiresIn: process.env.JWT_ACCESS_TOKEN_EXPIRY || '15m',
     issuer: process.env.JWT_ISSUER || 'fittrack-api',
-  });
+  };
+  return jwt.sign(payload, process.env.JWT_SECRET, opts);
+};
 
 const generateRefreshToken = () => crypto.randomBytes(64).toString('hex');
 
